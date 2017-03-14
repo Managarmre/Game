@@ -1,14 +1,29 @@
 """
 	Puissance 4
 	@author Pauline Houlgatte
-	@version 1.0
+	@version 2.0
+"""
+
+"""
+	liste des tâches
+		réaliser différents niveaux d'IA
 """
 
 from tkinter import *
 import random
 from tkinter.messagebox import showerror,showinfo
+import argparse
 
 global joueur_actuel
+
+def arg_parser():
+    parser = argparse.ArgumentParser(description=
+    	'Par défaut JvJ')
+    parser.add_argument('-ia', help=
+    	'JvsIA - Niveau ia, 1 = random, 5 = expert',
+    	choices=[1,2,3,4,5],type=int)
+    args = parser.parse_args()
+    return args
 
 def creation_fenetre():
 	print("Création de la fenêtre...")
@@ -67,6 +82,12 @@ def recuperation_clic(event):
 		color = next(joueur_actuel)
 		ajout_pion_grille(grille,canvas,clic_colonne,ligne,color)
 		end_of_game(clic_colonne,ligne,grille,color)
+		# tour IA
+		if (niveau_ia) :
+			c_ia, l_ia = ia(grille,niveau_ia,color)
+			color = next(joueur_actuel)
+			ajout_pion_grille(grille,canvas,c_ia,l_ia,color)
+			end_of_game(c_ia,l_ia,grille,color)
 
 def end_of_game(colonne,ligne,grille,color):
 	compteur = 0
@@ -148,10 +169,38 @@ def verif_end_of_game(compteur,color):
 		print("Fin de la partie")
 		exit()
 
+def ia(grille,niveau,couleur_adverse):
+	print("L'IA prépare son coup...")
+	if (niveau == 1):
+		ligne,colonne = ia_random(grille)
+	elif (niveau == 2): 
+		ligne,colonne = ia_expert(grille,couleur_adverse)
+	print("L'IA a terminé son tour.")
+	return colonne,ligne
+
+def ia_random(grille):
+	colonne = random.randrange(0,len(grille),1)
+	ligne = verification_placement(grille,colonne)
+	while (ligne == -1):
+		colonne = random.randrange(0,len(grille),1)
+		ligne = verification_placement(grille,colonne)
+	return ligne,colonne
+
+def ia_expert(grille,couleur_adverse):
+	# regarder le plus loin possible, 
+	# bloquer tout alignement de trois pions gagnants
+	# min max / alpha bêta
+	ligne = 0
+	colonne = 0
+	return ligne,colonne
+
 """
 	main function
 """
 if __name__ == '__main__':
+	arg = arg_parser()
+	niveau_ia = arg.ia
+
 	joueur_actuel = mise_a_jour_joueur()
 
 	fenetre = creation_fenetre()
@@ -161,3 +210,101 @@ if __name__ == '__main__':
 	canvas.pack()
 
 	fenetre.mainloop()
+
+
+"""
+/*
+       fonction minmax avec �lagage alpha/beta
+       @param n : profondeur atteinte dans l'arbre du jeu
+       @param grille : configuration atteinte
+       @param alpha : param�tre pour l'�lagages, valeur maximale actuellement atteinte
+       par le programme 
+       @param beta : param�tre pour l'�lagages, valeur minimale actuellement atteinte
+       par l'adversaire du programme
+    */
+  private Resultat minimaxAlphaBeta(int n, Puissance4 grille, double alpha, double beta) {
+	int[] coups ;
+	Resultat succ = new Resultat (0.0,-1) ;
+	Resultat res = new Resultat(0.0,-1) ;
+	Puissance4 grille2 ;
+ 
+	if (n == _profondeur) {
+	    return new Resultat(grille.evaluation(), coupAleatoire(grille)) ;	    
+	}
+	else {
+	    if ((n % 2) == 0) {
+		/* c'est � l'ordi de jouer */
+		coups = grille.generateurDeCoups() ;
+		if (coups.length == 0) return new Resultat(0.0,-1) ;
+		int pos=0;
+		for (int i = 0 ; i < coups.length ; i++) {
+		  if (grille.programmeAGagne(coups[i])) return new Resultat(MAX,coups[i]) ;
+		}
+		res.valeur(alpha) ;
+		res.colonne(coups[0]) ;
+		
+		/* ajout */	
+		Resultat[] tabMemo=new Resultat[_matrice[0].length];
+		tabMemo[pos]=new Resultat(alpha, coups[0]);
+		/* fin ajout */
+		
+		for (int i = 0 ; i < coups.length && (alpha < beta) ; i++) {	     		
+		    grille2 = grille.copie() ;
+		    grille2.programmeJoueEn(coups[i]) ;
+		    succ = minimaxAlphaBeta(n+1, grille2, alpha, beta) ;		    
+		if(n==0)System.out.println("colonne "+coups[i]+" : "+succ.valeur());
+		    /* ajout personnel */
+		    if (succ.valeur() == alpha) { //aleatoire
+			tabMemo[pos]=new Resultat(succ.valeur(), coups[i]);
+			pos++;
+		    }
+		   /* fin ajout */
+		    
+		    if (succ.valeur() > alpha) {	           
+			alpha = succ.valeur() ;
+			res.valeur(alpha) ;
+			res.colonne(coups[i]);
+			/* ajout personnel */
+			tabMemo[0]=new Resultat(succ.valeur(), coups[i]);
+			pos=1;
+			/* fin ajout */
+			
+		    }
+		   
+		}
+		 if(pos>1){/* plusieurs �galit�s */
+		 	int ran =RANDOM.nextInt(pos);
+		    	   res=tabMemo[ran];
+		    	   if(n==0)System.out.println("coup al�atoire :  
+		nb choix("+pos+") pos("+ran+") colonne("+res.colonne()+")");
+		    	   if(n==0)afficheR(tabMemo,pos);
+		    	   }
+		return res ;
+	    }
+	    else {/* on simule l'adversaire */
+		coups = grille.generateurDeCoups() ;
+		if (coups.length == 0) return new Resultat(0.0,-1) ;
+		
+		for (int i = 0 ; i < coups.length ; i++) {
+		    if (grille.adversaireAGagne(coups[i])) return new Resultat(MIN,coups[i]) ;
+		}
+		res.valeur(beta) ;
+		res.colonne(coups[0]) ;
+		/* teste tous les cas possibles */
+		for (int i = 0 ; i < coups.length && (alpha < beta) ; i++) {	     
+		    grille2 = grille.copie() ;
+		    grille2.adversaireJoueEn(coups[i]) ;
+		  
+		    succ = minimaxAlphaBeta(n+1, grille2, alpha, beta) ;
+		 
+		    if (succ.valeur() < beta) {
+			beta = succ.valeur() ;
+			res.valeur(beta) ;
+			res.colonne(coups[i]) ;
+		    }
+		}		
+		return res ;
+	    }
+	}
+    }
+"""
